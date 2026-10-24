@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://api.anthropic.com; img-src data:; form-action 'none'; base-uri 'none'">
+<title>Monthly Variance Analysis Automation</title>
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:#202020;font:14px/1.45 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:24px 20px 60px}
+h1{margin:0;color:#0A2540;font-size:24px}
+.sub{color:#55606E;margin:4px 0 14px}
+h2{color:#635BFF;font-size:16px;margin:26px 0 8px}
+.card{border:1px solid #dfe3ea;border-radius:10px;padding:14px;background:#fff}
+.banner{background:#F2F3F7;border-radius:8px;padding:8px 12px;color:#55606E;font-size:12.5px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+button{font:inherit;border:0;border-radius:8px;padding:8px 14px;cursor:pointer;background:#635BFF;color:#fff;font-weight:600}
+button.sec{background:#fff;color:#0A2540;border:1px solid #c9cfda}
+button:disabled{opacity:.5;cursor:default}
+input[type=number]{width:110px;padding:6px 8px;border:1px solid #c9cfda;border-radius:6px;font:inherit}
+label{font-size:12.5px;color:#55606E}
+table{border-collapse:collapse;width:100%}
+th,td{border:1px solid #dfe3ea;padding:7px 9px;text-align:left;vertical-align:top}
+th{background:#F2F3F7;color:#0A2540;font-size:12.5px}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.t1 td:first-child{border-left:5px solid #2e9e5b}
+tr.t2 td:first-child{border-left:5px solid #e0b400}
+.pill{display:inline-block;border-radius:10px;padding:1px 8px;font-size:12px;font-weight:600}
+.tie{background:#dff3e6;color:#17693a}.mismatch{background:#fde2e0;color:#a32a22}.no_gl{background:#ececf1;color:#444}
+.pass{background:#dff3e6;color:#17693a}.fail{background:#fde2e0;color:#a32a22}.pend{background:#ececf1;color:#444}
+.expl{max-width:330px}
+details{margin-top:6px}summary{cursor:pointer;color:#635BFF;font-size:12.5px}
+pre{background:#F2F3F7;border-radius:8px;padding:10px;overflow:auto;font-size:12px;white-space:pre-wrap;word-break:break-word}
+.err{color:#a32a22}
+.kpis{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0}
+.kpi{background:#F2F3F7;border-radius:8px;padding:8px 14px;min-width:110px}.kpi b{display:block;font-size:13px;color:#0A2540}.kpi span{display:block;font-size:20px;font-weight:400;color:#0A2540}
+.small{font-size:12px;color:#55606E}
+</style></head><body><div class="wrap">
+<h1>Monthly Variance Analysis Automation</h1>
+<div class="sub">Monthly variance analysis is a recurring close task that explains why accounts moved versus the prior month. Management and auditors expect every material or unusual movement to be explained, which confirms the numbers are reasonable and catches errors or misposted entries before the books are final. This tool flags large or unusual movements, ties each one to the voucher detail, and drafts a short explanation from an evidence pack.</div>
+<div class="banner">Demo runs on scrubbed data only (one entity, USD, income statement). No real organization data is used.</div>
+
+<h2>1. Inputs</h2>
+<div class="card">
+  <div class="row">
+    <div><label>Income statement CSV<br><input type="file" id="fStmt" accept=".csv"></label></div>
+    <div><label>Voucher detail CSV<br><input type="file" id="fVch" accept=".csv"></label></div>
+    <div><label>Tier 1 threshold ($)<br><input type="number" id="thr" value="25000" step="1000"></label></div>
+    <button class="sec" id="btnDemo">Reset to demo data</button>
+    <button id="btnRun">Run checks</button>
+  </div>
+  <div class="row" id="keyRow" style="margin-top:10px;display:none">
+    <div><label>Anthropic API key (needed only outside Cowork)<br><input type="password" id="apiKey" placeholder="sk-ant-..." style="width:260px;padding:6px 8px;border:1px solid #c9cfda;border-radius:6px"></label></div>
+    <div><label>Model<br><input type="text" id="model" value="claude-haiku-5-5" style="width:170px;padding:6px 8px;border:1px solid #c9cfda;border-radius:6px"></label></div>
+    <div class="small" style="max-width:340px">The key stays in this browser tab, is never saved, and is sent only to api.anthropic.com. Checks run without a key; only the AI drafting needs one.</div>
+  </div>
+  <div class="small" id="srcNote" style="margin-top:8px"></div>
+</div>
+
+<h2>2. Intake and tier summary</h2>
+<div class="card" id="intake">Loading…</div>
+
+<h2>3. Accounts to explain</h2>
+<div class="row" style="margin-bottom:8px">
+  <button id="btnDraft" disabled>Draft explanations with AI</button>
+  <button class="sec" id="btnBad" disabled title="Adds an invented amount to the first draft to show the number check blocking it">Test number check</button>
+  <button class="sec" id="btnDl" disabled>Download evidence file</button>
+  <span class="small" id="status"></span>
+</div>
+<div class="card" style="padding:0;overflow:auto"><table id="res"><thead><tr>
+<th>Account</th><th>Tier</th><th>Beginning balance</th><th>Ending balance</th><th>Change</th><th>Tie-out</th><th>Explanation (draft for review)</th><th>Number check</th></tr></thead><tbody></tbody></table></div>
+<div class="small" style="margin-top:6px">Green = Tier 1 (over threshold). Yellow = Tier 2 (balance against its normal direction). Beginning balance = prior-month statement amount; ending balance = current-month statement amount. Drafts are never posted; an accountant reviews each one.</div>
+
+<h2>4. Playbook prompt used for drafting</h2>
+<div class="card"><details><summary>Show prompt</summary><pre id="prompt"></pre></details></div>
+</div>
+
+<script>
+const DEMO_STMT = `Account,Name,Prior Month,Current Month,Change
+4010,Service revenue,-520000,-548000,-28000
+5010,Salaries,310000,312400,2400
+6120,Software subscriptions,42000,71500,29500
+6200,Professional fees,18000,61000,43000
+6350,Meals,4000,-1200,-5200
+6400,Contract labor,12000,40000,28000
+6500,Rent,25000,25000,0
+6600,Utilities,3100,3350,250`;
+const DEMO_VCH = `Voucher,Date,Account display value,Account name,Currency,Amount,Posting layer,Description,Name2,Company accounts ID
+INV0001,2026-08-15,4010,Service revenue,USD,-300000,Current,Monthly service fee,Customer P,DEMO
+INV0002,2026-08-20,4010,Service revenue,USD,-220000,Current,Monthly service fee,Customer Q,DEMO
+INV0101,2026-09-15,4010,Service revenue,USD,-300000,Current,Monthly service fee,Customer P,DEMO
+INV0102,2026-09-20,4010,Service revenue,USD,-233000,Current,Monthly service fee incl. added seats,Customer Q,DEMO
+INV0103,2026-09-25,4010,Service revenue,USD,-15000,Current,New customer onboarding fee,Customer R,DEMO
+PAY0801,2026-08-31,5010,Salaries,USD,310000,Current,Payroll,Payroll provider,DEMO
+PAY0901,2026-09-30,5010,Salaries,USD,312400,Current,Payroll,Payroll provider,DEMO
+AP0801,2026-08-10,6120,Software subscriptions,USD,30000,Current,Core platform subscription,Vendor C,DEMO
+AP0802,2026-08-12,6120,Software subscriptions,USD,12000,Current,Usage charges,Vendor B,DEMO
+AP0901,2026-09-10,6120,Software subscriptions,USD,30000,Current,Core platform subscription,Vendor C,DEMO
+AP0902,2026-09-12,6120,Software subscriptions,USD,17500,Current,Usage charges,Vendor B,DEMO
+AP0903,2026-09-14,6120,Software subscriptions,USD,24000,Current,Annual license,Vendor A,DEMO
+FC0901,2026-09-30,6120,Software subscriptions,USD,9999,Forecast,Forecast accrual (not actuals),Vendor A,DEMO
+AP0803,2026-08-18,6200,Professional fees,USD,18000,Current,Advisory services,Firm L,DEMO
+AP0904,2026-09-08,6200,Professional fees,USD,18000,Current,Advisory services,Firm L,DEMO
+AP0905,2026-09-22,6200,Professional fees,USD,40000,Current,Project services,Firm M,DEMO
+EX0801,2026-08-28,6350,Meals,USD,4000,Current,Team meals,Employee expenses,DEMO
+EX0901,2026-09-12,6350,Meals,USD,2300,Current,Team meals,Employee expenses,DEMO
+EX0902,2026-09-27,6350,Meals,USD,-3500,Current,Refund of event deposit,Caterer,DEMO
+AP0810,2026-08-01,6500,Rent,USD,25000,Current,Office rent,Landlord,DEMO
+AP0910,2026-09-01,6500,Rent,USD,25000,Current,Office rent,Landlord,DEMO
+AP0820,2026-08-20,6600,Utilities,USD,3100,Current,Utilities,Utility co,DEMO
+AP0920,2026-09-20,6600,Utilities,USD,3350,Current,Utilities,Utility co,DEMO`;
+const DEMO_NAT = {"4010": "credit", "5010": "debit", "6120": "debit", "6200": "debit", "6350": "debit", "6400": "debit", "6500": "debit", "6600": "debit"};
+const DEMO_NOTES = {"6120": "Name each counterparty behind the change and say whether the movement is a new charge or a change in an existing counterparty's amount.", "6350": "A credit on this account is usually a refund or reversal; describe it from the entry description, not as spending.", "6400": "If no transaction detail exists, say so plainly; do not guess at contractors or reasons."};
+
+const PLAYBOOK = `You draft variance explanations for an accountant to review. You receive one evidence pack (JSON) for one income statement account. Follow these rules exactly.
+1. Use ONLY facts, names and amounts that appear in the pack. Never invent vendors, events, reasons or amounts. Quote amounts exactly as the pack's rounded strings (for example "$29.5k"); never recompute or re-round.
+2. If the pack has variance_phrase, open the explanation with it verbatim (for example "Increase of $29.5k due to ..."). If it has unnatural_phrase, open with that verbatim instead. Never choose increase/decrease words yourself; take every direction word from the pack's own fields.
+3. Then name the drivers from vendors, using the net amounts and change as given, and frame it as a current month versus prior month contrast.
+4. Do not claim anything is one-time, recurring, routine or a run-rate. The pack has no history that supports that.
+5. If tie_out.variance.status is "mismatch", add one sentence saying the statement does not tie to the voucher detail, naming the difference from the pack. If no_gl is true, say no transaction detail is available for this account and do not guess drivers.
+6. One to three sentences. Plain English. Output only the explanation text.
+7. Each vendor row shows net debit or credit. On a debit-natural account a credit is a reduction (such as a refund or credit memo); on a credit-natural account a debit is a reduction. Describe those using the entry description, never as spending or revenue earned.
+8. If the pack has account_note, follow it as extra guidance on how to write about this account. It never permits facts that are not in the pack.`;
+document.getElementById('prompt').textContent = PLAYBOOK;
+
+// ---------- helpers
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function parseCSV(t){const rows=[];let r=[],c='',q=false;
+  for(let i=0;i<t.length;i++){const ch=t[i];
+    if(q){if(ch=='"'){if(t[i+1]=='"'){c+='"';i++}else q=false}else c+=ch}
+    else if(ch=='"')q=true;else if(ch==','){r.push(c);c=''}
+    else if(ch=='\n'||ch=='\r'){if(ch=='\r'&&t[i+1]=='\n')i++;r.push(c);c='';if(r.length>1||r[0]!=='')rows.push(r);r=[]}
+    else c+=ch}
+  if(c!==''||r.length){r.push(c);rows.push(r)}
+  const h=rows.shift().map(x=>x.trim());return rows.map(x=>Object.fromEntries(h.map((k,i)=>[k,(x[i]??'').trim()])))}
+function fmt(n){const a=Math.abs(n);if(a>=1e6)return '$'+(a/1e6).toFixed(1)+'M';if(a>=1e3)return '$'+(a/1e3).toFixed(1)+'k';return '$'+a.toFixed(0)}
+function full(n){return '$'+Math.abs(n).toLocaleString('en-US',{maximumFractionDigits:2})}
+const signed=n=>(n<0?'-':'')+full(n);
+const MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const mname=m=>MON[+m.slice(5,7)-1]+' '+m.slice(0,4);
+const prevMonth=m=>{let y=+m.slice(0,4),k=+m.slice(5,7)-1;if(k==0){y--;k=12}return y+'-'+String(k).padStart(2,'0')};
+const natOf=(code,cfg)=>cfg.nat[code]||(code[0]=='4'?'credit':'debit');
+const eff=(delta,nat)=>((nat=='debit'?delta>0:delta<0)?'increase':'decrease');
+
+let state={stmtText:DEMO_STMT,vchText:DEMO_VCH,src:'demo',run:null};
+
+// ---------- stage 1-4: intake, tier, tie-out, evidence pack (all deterministic)
+function analyze(){
+  const cfg={thr:+$('thr').value||25000,nat:DEMO_NAT};
+  const errs=[],warns=[];
+  let stmt,vch;
+  try{stmt=parseCSV(state.stmtText);vch=parseCSV(state.vchText)}catch(e){return {errs:['Could not read the CSV files.']}}
+  const needS=['Account','Name','Prior Month','Current Month','Change'];
+  const needV=['Date','Account display value','Amount','Posting layer'];
+  if(!stmt.length||needS.some(k=>!(k in stmt[0])))errs.push('Statement is missing columns: '+needS.filter(k=>!stmt.length||!(k in stmt[0])).join(', '));
+  if(!vch.length||needV.some(k=>!(k in vch[0])))errs.push('Voucher detail is missing columns: '+needV.filter(k=>!vch.length||!(k in vch[0])).join(', '));
+  if(errs.length)return {errs};
+  const cur=vch.filter(r=>r['Posting layer']==='Current');
+  const skipped=vch.length-cur.length;
+  const rows=cur.map(r=>({acct:r['Account display value'].slice(0,4),m:r['Date'].slice(0,7),amt:+r['Amount'],desc:r['Description']||'',cp:r['Name2']||'(unattributed)',v:r['Voucher']||''}));
+  const months=[...new Set(rows.map(r=>r.m))].sort();
+  if(months.length<2)errs.push('Need at least two months of voucher detail; found '+months.length+'.');
+  const target=months[months.length-1],prior=prevMonth(target);
+  if(months.length>=2&&!months.includes(prior))errs.push('Prior month '+prior+' is missing from the voucher detail (months found: '+months.join(', ')+').');
+  if(errs.length)return {errs};
+  const dup=stmt.map(r=>r.Account).filter((a,i,arr)=>arr.indexOf(a)!==i);
+  if(dup.length)errs.push('Duplicate account rows: '+[...new Set(dup)].join(', ')+'. Resolve before running.');
+  if(errs.length)return {errs};
+  if(skipped)warns.push(skipped+' voucher row(s) excluded: posting layer is not "Current".');
+  const accts=stmt.map(r=>({code:r.Account.slice(0,4),name:r.Name,prior:+r['Prior Month'],cur:+r['Current Month'],chg:+r.Change}));
+  const out=[];
+  for(const a of accts){
+    const nat=natOf(a.code,cfg);
+    const isT1=Math.abs(a.chg)>cfg.thr;
+    const against=a.cur!==0&&((nat=='debit'&&a.cur<0)||(nat=='credit'&&a.cur>0));
+    const tier=isT1?1:(against?2:0);
+    if(!tier){out.push({a,tier:0});continue}
+    const ents=rows.filter(r=>r.acct==a.code);
+    const noGl=ents.length==0;
+    const g=m=>ents.filter(r=>r.m==m).reduce((s,r)=>s+r.amt,0);
+    const tol=0.01;
+    const comp=(rep,gl)=>({status:Math.abs(rep-gl)<=tol?'tie':'mismatch',gl,report:rep,diff:+(rep-gl).toFixed(2)});
+    const tie=noGl?{cm:{status:'no_gl'},pm:{status:'no_gl'},variance:{status:'no_gl'}}:{cm:comp(a.cur,g(target)),pm:comp(a.prior,g(prior)),variance:comp(a.chg,g(target)-g(prior))};
+    const cps=[...new Set(ents.filter(r=>r.m==target||r.m==prior).map(r=>r.cp))];
+    const side=x=>x===0?'$0':fmt(x)+(x>0?' debit':' credit');
+    const vendors=cps.map(cp=>{
+      const p=ents.filter(r=>r.cp==cp&&r.m==prior).reduce((s,r)=>s+r.amt,0);
+      const c=ents.filter(r=>r.cp==cp&&r.m==target).reduce((s,r)=>s+r.amt,0);
+      const d=c-p;
+      return {counterparty:cp,[mname(prior)+' net']:side(p),[mname(target)+' net']:side(c),change:(d===0?'no change':eff(d,nat)+' of '+fmt(d)),_abs:Math.abs(d),
+        current_month_entries:ents.filter(r=>r.cp==cp&&r.m==target).map(r=>({description:r.desc,amount:fmt(r.amt),side:r.amt>0?'debit':'credit'}))}}).sort((x,y)=>y._abs-x._abs).map(({_abs,...r})=>r);
+    const pack={account:a.code,name:a.name,statement:'Income Statement',currency:'USD',target_month:mname(target),prior_month:mname(prior),
+      tier,tier_reason:tier==1?'change exceeds threshold of '+fmt(cfg.thr):'current month balance runs against natural '+nat+' balance',
+      natural_balance:nat,prior_month_amount:fmt(a.prior),current_month_amount:fmt(a.cur),
+      tie_out:Object.fromEntries(Object.entries(tie).map(([k,v])=>[k,v.status=='mismatch'?{status:v.status,difference:fmt(v.diff),difference_full:full(v.diff)}:{status:v.status}])),
+      no_gl:noGl,vendors:noGl?[]:vendors};
+    if(DEMO_NOTES[a.code])pack.account_note=DEMO_NOTES[a.code];
+    if(tier==1){const d=eff(a.chg,nat);pack.variance_phrase=(d=='increase'?'Increase':'Decrease')+' of '+fmt(a.chg)+(noGl?'':' due to')}
+    else pack.unnatural_phrase='Current month balance of '+fmt(a.cur)+' is a '+(nat=='debit'?'credit':'debit')+' on a '+nat+'-natural account in '+mname(target);
+    out.push({a,tier,tie,pack,nat});
+  }
+  return {errs,warns,cfg,months,target,prior,accts,out,counts:{t1:out.filter(x=>x.tier==1).length,t2:out.filter(x=>x.tier==2).length,all:accts.length}};
+}
+
+// ---------- number check (deterministic guard on AI output)
+function allowedSet(pack){
+  const s=new Set(),cp=new Set();
+  JSON.stringify(pack,(k,v)=>{if(typeof v=='string'){(v.match(/\$[\d,]+(?:\.\d+)?[kM]?/g)||[]).forEach(x=>s.add(x))}return v});
+  (pack.vendors||[]).forEach(v=>cp.add(v.counterparty));
+  return {s,cp};
+}
+function numberCheck(text,pack,allCps){
+  const {s,cp}=allowedSet(pack);
+  const bad=[];
+  (text.match(/\$[\d,]+(?:\.\d+)?[kM]?/g)||[]).forEach(x=>{if(!s.has(x))bad.push('amount '+x)});
+  allCps.forEach(n=>{if(!cp.has(n)&&text.includes(n))bad.push('name '+n)});
+  (text.match(/\b(?:Vendor|Firm|Customer) [A-Z]\b/g)||[]).forEach(n=>{if(!cp.has(n))bad.push('name '+n)});
+  return [...new Set(bad)];
+}
+
+// ---------- rendering
+function render(){
+  const R=state.run;
+  if(R.errs&&R.errs.length){$('intake').innerHTML='<div class="err"><b>Stopped:</b><ul>'+R.errs.map(e=>'<li>'+esc(e)+'</li>').join('')+'</ul></div>';$('res').tBodies[0].innerHTML='';$('btnDraft').disabled=true;$('btnBad').disabled=true;$('btnDl').disabled=true;return}
+  const mm=R.out.filter(x=>x.tie&&x.tie.variance.status=='mismatch').length,ng=R.out.filter(x=>x.pack&&x.pack.no_gl).length;
+  $('intake').innerHTML=`<div class="small">Target month <b>${esc(mname(R.target))}</b>, prior month <b>${esc(mname(R.prior))}</b>. ${R.accts.length} accounts on the statement.</div>
+  <div class="kpis"><div class="kpi"><b>Tier 1</b><span>${R.counts.t1}</span></div><div class="kpi"><b>Tier 2</b><span>${R.counts.t2}</span></div><div class="kpi"><b>Tie-out mismatch</b><span>${mm}</span></div><div class="kpi"><b>No detail</b><span>${ng}</span></div></div><div class="small"><b>Tier 1:</b> the account's change exceeds the threshold (${fmt(R.cfg.thr)}). <b>Tier 2:</b> the current balance runs against the account's natural direction, for example a credit balance on an expense account. Both tiers get a drafted explanation.</div>`+
+  (R.warns.length?'<div class="small">Warnings: '+esc(R.warns.join(' '))+'</div>':'');
+  const tb=$('res').tBodies[0];tb.innerHTML='';
+  R.out.filter(x=>x.tier).forEach((x,i)=>{
+    const t=x.tie.variance,tr=document.createElement('tr');tr.className='t'+x.tier;
+    let tieTxt=`<span class="pill ${t.status}">${t.status=='no_gl'?'no detail':t.status}</span>`;
+    if(t.status=='mismatch')tieTxt+=`<div class="small">diff ${full(t.diff)}</div>`;
+    const a=x.a;
+    tr.innerHTML=`<td><b>${esc(a.code)}</b> ${esc(a.name)}</td><td>Tier ${x.tier}</td><td class="n">${signed(a.prior)}</td><td class="n">${signed(a.cur)}</td><td class="n">${signed(a.chg)}</td><td>${tieTxt}</td>
+    <td class="expl" id="ex${i}"><span class="small">Not drafted yet</span></td><td id="nc${i}"><span class="pill pend">pending</span></td>`;
+    tb.appendChild(tr);
+    const d=document.createElement('tr');d.innerHTML=`<td colspan="8" style="border-top:0;padding:0 9px 6px"><details><summary>Evidence pack for ${esc(a.code)}</summary><pre>${esc(JSON.stringify(x.pack,null,2))}</pre></details></td>`;tb.appendChild(d);
+  });
+  $('btnDraft').disabled=false;$('btnBad').disabled=false;$('btnDl').disabled=false;
+}
+
+async function callAI(prompt,pack){
+  if(window.cowork&&window.cowork.askClaude)return await window.cowork.askClaude(prompt,[pack]);
+  const key=$('apiKey').value.trim();
+  if(!key)return {isError:true,text:'Paste an Anthropic API key in section 1 to draft explanations.'};
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:$('model').value.trim()||'claude-haiku-5-5',max_tokens:400,system:prompt,messages:[{role:'user',content:'Evidence pack:\n'+JSON.stringify(pack,null,2)}]})});
+    const j=await r.json();
+    if(!r.ok)return {isError:true,text:(j.error&&j.error.message)||('HTTP '+r.status)};
+    return {text:j.content.map(c=>c.text||'').join('')};
+  }catch(e){return {isError:true,text:String(e)}}
+}
+// ---------- AI drafting with number check and one corrective retry
+async function draftOne(x,allCps,inject){
+  const log=[];let text='',bad=[];
+  for(let attempt=1;attempt<=2;attempt++){
+    const extra=attempt==2?'\n\nCORRECTION: your previous draft contained items not in the pack: '+bad.join(', ')+'. Rewrite using only amounts and names that appear in the pack.':'';
+    const r=await callAI(PLAYBOOK+extra,x.pack);
+    if(r.isError){log.push({attempt,error:r.text||'AI call failed'});return {text:'',bad:[],log,error:true}}
+    text=r.text.trim().replace(/^"|"$/g,'');
+    if(inject&&attempt==1)text+=' This was driven by a $187.4k one-time settlement with Vendor Z.';
+    bad=numberCheck(text,x.pack,allCps);
+    log.push({attempt,text,blocked:bad});
+    if(!bad.length)break;
+  }
+  return {text,bad,log,error:false};
+}
+async function draftAll(inject){
+  const R=state.run;if(!R||R.errs.length)return;
+  $('btnDraft').disabled=true;$('btnBad').disabled=true;
+  const allCps=[...new Set(R.out.filter(x=>x.pack).flatMap(x=>x.pack.vendors.map(v=>v.counterparty)))];
+  const items=R.out.filter(x=>x.tier);
+  for(let i=0;i<items.length;i++){
+    $('status').textContent='Drafting '+(i+1)+' of '+items.length+'…';
+    const res=await draftOne(items[i],allCps,inject&&i==0);
+    items[i].result=res;
+    const ex=$('ex'+i),nc=$('nc'+i);
+    if(res.error){ex.innerHTML='<span class="err">AI draft unavailable: '+esc(res.log[0].error)+'</span>';nc.innerHTML='<span class="pill fail">no draft</span>';continue}
+    const ok=res.bad.length==0;
+    ex.textContent=ok?res.text:'[BLOCKED] '+res.text;
+    const retried=res.log.length>1;
+    nc.innerHTML=`<span class="pill ${ok?'pass':'fail'}">${ok?'pass':'blocked'}</span>`+(retried?`<div class="small">${ok?esc('passed after retry; first draft blocked: '+res.log[0].blocked.join(', ')):''}</div>`:'')+(ok?'':`<div class="small">not in pack: ${esc(res.bad.join(', '))}</div>`);
+  }
+  $('status').textContent='Done. Drafts are for accountant review; nothing is posted.';
+  $('btnDraft').disabled=false;$('btnBad').disabled=false;
+}
+
+// ---------- evidence file download
+function evidenceMd(){
+  const R=state.run;let s=`# Variance analysis evidence\n\nStatement: Income Statement. Target ${mname(R.target)}, prior ${mname(R.prior)}. Threshold ${fmt(R.cfg.thr)}.\nAccounts on statement: ${R.accts.length}. Tier 1: ${R.counts.t1}. Tier 2: ${R.counts.t2}.\n`;
+  if(R.warns.length)s+='\nWarnings: '+R.warns.join(' ')+'\n';
+  for(const x of R.out.filter(x=>x.tier)){
+    s+=`\n## ${x.a.code} ${x.a.name}\n- Tier: ${x.tier} (${x.pack.tier_reason})\n- Beginning balance (${mname(R.prior)}): ${signed(x.a.prior)}\n- Ending balance (${mname(R.target)}): ${signed(x.a.cur)}\n- Change: ${full(x.a.chg)} (${x.a.chg<0?'negative':'positive'} on statement)\n- Tie-out (variance): ${x.tie.variance.status}${x.tie.variance.status=='mismatch'?', difference '+full(x.tie.variance.diff):''}\n`;
+    s+='- Evidence pack:\n```json\n'+JSON.stringify(x.pack,null,2)+'\n```\n';
+    if(x.result){s+='- Draft attempts:\n';x.result.log.forEach(l=>{s+=`  - Attempt ${l.attempt}: ${l.error?'error '+l.error:l.text+(l.blocked.length?' [blocked: '+l.blocked.join(', ')+']':' [passed number check]')}\n`})}
+  }
+  return s;
+}
+$('btnDl').onclick=()=>{const b=new Blob([evidenceMd()],{type:'text/markdown'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='variance_evidence.md';a.click()};
+
+// ---------- wiring
+function go(){state.run=analyze();render()}
+$('btnRun').onclick=go;
+$('btnDraft').onclick=()=>draftAll(false);
+$('btnBad').onclick=()=>draftAll(true);
+function srcLabel(){const s=state.stmtName,v=state.vchName;$('srcNote').textContent=(!s&&!v)?'Scrubbed demo data is loaded (Aug and Sep 2026). You can also upload your own income statement and voucher detail CSV files.':'Income statement: '+(s?'uploaded file "'+s+'"':'built-in demo data')+'. Voucher detail: '+(v?'uploaded file "'+v+'"':'built-in demo data')+'.'}
+$('btnDemo').onclick=()=>{state={stmtText:DEMO_STMT,vchText:DEMO_VCH,src:'demo',run:null};$('fStmt').value='';$('fVch').value='';srcLabel();go()};
+$('fStmt').onchange=async e=>{if(e.target.files[0]){state.stmtText=await e.target.files[0].text();state.stmtName=e.target.files[0].name;srcLabel();go()}};
+$('fVch').onchange=async e=>{if(e.target.files[0]){state.vchText=await e.target.files[0].text();state.vchName=e.target.files[0].name;srcLabel();go()}};
+$('thr').onchange=go;
+srcLabel();
+if(!(window.cowork&&window.cowork.askClaude))$('keyRow').style.display='flex';
+go();
+</script></body></html>

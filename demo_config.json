@@ -1,0 +1,18 @@
+{
+ "threshold": 25000,
+ "naturals": {
+  "4010": "credit",
+  "5010": "debit",
+  "6120": "debit",
+  "6200": "debit",
+  "6350": "debit",
+  "6400": "debit",
+  "6500": "debit",
+  "6600": "debit"
+ },
+ "notes": {
+  "6120": "Name each counterparty behind the change and say whether the movement is a new charge or a change in an existing counterparty's amount.",
+  "6350": "A credit on this account is usually a refund or reversal; describe it from the entry description, not as spending.",
+  "6400": "If no transaction detail exists, say so plainly; do not guess at contractors or reasons."
+ }
+}

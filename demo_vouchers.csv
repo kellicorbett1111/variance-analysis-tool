@@ -1,0 +1,24 @@
+Voucher,Date,Account display value,Account name,Currency,Amount,Posting layer,Description,Name2,Company accounts ID
+INV0001,2026-08-15,4010,Service revenue,USD,-300000,Current,Monthly service fee,Customer P,DEMO
+INV0002,2026-08-20,4010,Service revenue,USD,-220000,Current,Monthly service fee,Customer Q,DEMO
+INV0101,2026-09-15,4010,Service revenue,USD,-300000,Current,Monthly service fee,Customer P,DEMO
+INV0102,2026-09-20,4010,Service revenue,USD,-233000,Current,Monthly service fee incl. added seats,Customer Q,DEMO
+INV0103,2026-09-25,4010,Service revenue,USD,-15000,Current,New customer onboarding fee,Customer R,DEMO
+PAY0801,2026-08-31,5010,Salaries,USD,310000,Current,Payroll,Payroll provider,DEMO
+PAY0901,2026-09-30,5010,Salaries,USD,312400,Current,Payroll,Payroll provider,DEMO
+AP0801,2026-08-10,6120,Software subscriptions,USD,30000,Current,Core platform subscription,Vendor C,DEMO
+AP0802,2026-08-12,6120,Software subscriptions,USD,12000,Current,Usage charges,Vendor B,DEMO
+AP0901,2026-09-10,6120,Software subscriptions,USD,30000,Current,Core platform subscription,Vendor C,DEMO
+AP0902,2026-09-12,6120,Software subscriptions,USD,17500,Current,Usage charges,Vendor B,DEMO
+AP0903,2026-09-14,6120,Software subscriptions,USD,24000,Current,Annual license,Vendor A,DEMO
+FC0901,2026-09-30,6120,Software subscriptions,USD,9999,Forecast,Forecast accrual (not actuals),Vendor A,DEMO
+AP0803,2026-08-18,6200,Professional fees,USD,18000,Current,Advisory services,Firm L,DEMO
+AP0904,2026-09-08,6200,Professional fees,USD,18000,Current,Advisory services,Firm L,DEMO
+AP0905,2026-09-22,6200,Professional fees,USD,40000,Current,Project services,Firm M,DEMO
+EX0801,2026-08-28,6350,Meals,USD,4000,Current,Team meals,Employee expenses,DEMO
+EX0901,2026-09-12,6350,Meals,USD,2300,Current,Team meals,Employee expenses,DEMO
+EX0902,2026-09-27,6350,Meals,USD,-3500,Current,Refund of event deposit,Caterer,DEMO
+AP0810,2026-08-01,6500,Rent,USD,25000,Current,Office rent,Landlord,DEMO
+AP0910,2026-09-01,6500,Rent,USD,25000,Current,Office rent,Landlord,DEMO
+AP0820,2026-08-20,6600,Utilities,USD,3100,Current,Utilities,Utility co,DEMO
+AP0920,2026-09-20,6600,Utilities,USD,3350,Current,Utilities,Utility co,DEMO

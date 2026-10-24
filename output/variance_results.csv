@@ -1,0 +1,6 @@
+Account,Name,Tier,Beginning balance,Ending balance,Change,Tie-out,Draft explanation,Number check
+4010,Service revenue,1,-520000.0,-548000.0,-28000.0,tie,,
+6120,Software subscriptions,1,42000.0,71500.0,29500.0,tie,,
+6200,Professional fees,1,18000.0,61000.0,43000.0,mismatch,,
+6350,Meals,2,4000.0,-1200.0,-5200.0,tie,,
+6400,Contract labor,1,12000.0,40000.0,28000.0,no_gl,,
