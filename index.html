@@ -65,6 +65,7 @@ pre{background:#F2F3F7;border-radius:8px;padding:10px;overflow:auto;font-size:12
   <button id="btnDraft" disabled>Draft explanations with AI</button>
   <button class="sec" id="btnBad" disabled title="Adds an invented amount to the first draft to show the number check blocking it">Test number check</button>
   <button class="sec" id="btnDl" disabled>Download evidence file</button>
+  <button class="sec" id="btnCsv" disabled>Download results CSV</button>
   <span class="small" id="status"></span>
 </div>
 <div class="card" style="padding:0;overflow:auto"><table id="res"><thead><tr>
@@ -222,7 +223,7 @@ function numberCheck(text,pack,allCps){
 // ---------- rendering
 function render(){
   const R=state.run;
-  if(R.errs&&R.errs.length){$('intake').innerHTML='<div class="err"><b>Stopped:</b><ul>'+R.errs.map(e=>'<li>'+esc(e)+'</li>').join('')+'</ul></div>';$('res').tBodies[0].innerHTML='';$('btnDraft').disabled=true;$('btnBad').disabled=true;$('btnDl').disabled=true;return}
+  if(R.errs&&R.errs.length){$('intake').innerHTML='<div class="err"><b>Stopped:</b><ul>'+R.errs.map(e=>'<li>'+esc(e)+'</li>').join('')+'</ul></div>';$('res').tBodies[0].innerHTML='';$('btnDraft').disabled=true;$('btnBad').disabled=true;$('btnDl').disabled=true;$('btnCsv').disabled=true;return}
   const mm=R.out.filter(x=>x.tie&&x.tie.variance.status=='mismatch').length,ng=R.out.filter(x=>x.pack&&x.pack.no_gl).length;
   $('intake').innerHTML=`<div class="small">Target month <b>${esc(mname(R.target))}</b>, prior month <b>${esc(mname(R.prior))}</b>. ${R.accts.length} accounts on the statement.</div>
   <div class="kpis"><div class="kpi"><b>Tier 1</b><span>${R.counts.t1}</span></div><div class="kpi"><b>Tier 2</b><span>${R.counts.t2}</span></div><div class="kpi"><b>Tie-out mismatch</b><span>${mm}</span></div><div class="kpi"><b>No detail</b><span>${ng}</span></div></div><div class="small"><b>Tier 1:</b> the account's change exceeds the threshold (${fmt(R.cfg.thr)}). <b>Tier 2:</b> the current balance runs against the account's natural direction, for example a credit balance on an expense account. Both tiers get a drafted explanation.</div>`+
@@ -238,7 +239,7 @@ function render(){
     tb.appendChild(tr);
     const d=document.createElement('tr');d.innerHTML=`<td colspan="8" style="border-top:0;padding:0 9px 6px"><details><summary>Evidence pack for ${esc(a.code)}</summary><pre>${esc(JSON.stringify(x.pack,null,2))}</pre></details></td>`;tb.appendChild(d);
   });
-  $('btnDraft').disabled=false;$('btnBad').disabled=false;$('btnDl').disabled=false;
+  $('btnDraft').disabled=false;$('btnBad').disabled=false;$('btnDl').disabled=false;$('btnCsv').disabled=false;
 }
 
 async function callAI(prompt,pack){
@@ -300,6 +301,18 @@ function evidenceMd(){
   return s;
 }
 $('btnDl').onclick=()=>{const b=new Blob([evidenceMd()],{type:'text/markdown'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='variance_evidence.md';a.click()};
+
+// ---------- results CSV download (same columns as the command-line version)
+const csvCell=v=>{const s=String(v??'');return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+function resultsCsv(){
+  const R=state.run;const rows=[['Account','Name','Tier','Beginning balance','Ending balance','Change','Tie-out','Draft explanation','Number check']];
+  for(const x of R.out.filter(x=>x.tier)){
+    const r=x.result;
+    rows.push([x.a.code,x.a.name,x.tier,x.a.prior,x.a.cur,x.a.chg,x.tie.variance.status,r?(r.error?'':r.text):'',r?(r.error?'no draft':(r.bad.length?'blocked':'pass')):'']);
+  }
+  return rows.map(r=>r.map(csvCell).join(',')).join('\r\n')+'\r\n';
+}
+$('btnCsv').onclick=()=>{const b=new Blob([resultsCsv()],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='variance_results.csv';a.click()};
 
 // ---------- wiring
 function go(){state.run=analyze();render()}
