@@ -16,18 +16,22 @@ All data here is scrubbed demo data (one entity, USD, income statement, August a
 
 ## Files
 
-| File | Purpose |
+| File | What it is and what it is for |
 |---|---|
-| `variance_tool.html` | Single-file web app. Checks run in the browser with no key; AI drafting needs an Anthropic API key pasted into the page (kept in the tab only). |
-| `variance_cli.py` | Same pipeline as a command-line script (standard library only). |
-| `PLAYBOOK.md` | The drafting prompt. |
-| `PROMPTS.md` | Prompt versions, what failed, and how it was fixed. |
-| `demo_statement.csv`, `demo_vouchers.csv`, `demo_config.json` | Scrubbed demo inputs. The config holds the threshold, each account's normal balance (debit or credit) and optional short per-account writing notes. |
-| `gen_data.py` | Regenerates the demo inputs. |
+| `index.html` | The tool. A single-file web app that runs in the browser: loads the statement and voucher detail, flags accounts, ties them to the ledger, builds evidence packs, drafts explanations and runs the number check. AI drafting works inside Cowork with no key; elsewhere it needs a pasted Anthropic API key (kept in the tab only). |
+| `variance_cli.py` | The same pipeline as a command-line script (standard library only). Easier to read line by line; writes the evidence file and results CSV to `output/`. |
+| `PLAYBOOK.md` | The drafting prompt used by the command-line version. The web page has its own copy built in, so change both together. |
+| `PROMPTS.md` | Prompt history: each version, what failed (the Meals refund wording), and how it was fixed. |
+| `demo_statement.csv` | Scrubbed demo income statement (August and September 2026): account, prior month, current month, change. |
+| `demo_vouchers.csv` | Scrubbed voucher (ledger) detail for the same months. The tool ties the statement to it. |
+| `demo_config.json` | Command-line settings: each account's normal balance (debit or credit) and optional per-account writing notes. The threshold is a separate option (`--threshold`), and the web page keeps its own copies of these settings in its script. |
+| `gen_data.py` | Regenerates the demo input files. |
+| `output/variance_evidence.md` | Sample evidence file: why each account was flagged, its tie-out result, the evidence pack and any draft attempts. This sample was produced with AI off, so it has no drafts. |
+| `output/variance_results.csv` | Sample results table: account, tier, beginning and ending balance, change, tie-out, draft, number check. |
 
 ## Run it
 
-Web app: open `variance_tool.html` in a browser, or host it (below). Click "Run checks", paste an API key, then "Draft explanations with AI". "Test number check" injects an invented sentence to show it being blocked.
+Web app: open `index.html` in a browser, or host it (below). Click "Run checks", then "Draft explanations with AI" (inside Cowork this needs no key; elsewhere paste an Anthropic API key first). "Test number check" injects an invented sentence to show it being blocked.
 
 Command line:
 
@@ -44,7 +48,7 @@ Outputs are written to `output/`: `variance_evidence.md` and `variance_results.c
 
 1. Create a GitHub repository and upload these files.
 2. Settings, Pages, deploy from the main branch, root folder.
-3. Rename `variance_tool.html` to `index.html` (or link to it by name). The link will be `https://<user>.github.io/<repo>/`.
+3. Keep the file named `index.html`. The link will be `https://<user>.github.io/<repo>/`.
 
 The page makes no calls until a user clicks the AI button, and the key is sent only to `api.anthropic.com`.
 
