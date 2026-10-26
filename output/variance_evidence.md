@@ -1,12 +1,17 @@
 # Variance analysis evidence
 
-Target September 2026, prior August 2026, threshold $25.0k.
+Statement: Income Statement. Target September 2026, prior August 2026. Threshold $25.0k.
+Accounts on statement: 8. Tier 1: 4. Tier 2: 1.
+
+Warnings: 1 voucher row(s) excluded: posting layer is not "Current".
 
 ## 4010 Service revenue
-- Tier 1: change exceeds threshold of $25.0k
-- Beginning balance (August 2026): -520,000.00
-- Ending balance (September 2026): -548,000.00
+- Tier: 1 (change exceeds threshold of $25.0k)
+- Beginning balance (August 2026): -$520,000
+- Ending balance (September 2026): -$548,000
+- Change: $28,000 (negative on statement)
 - Tie-out (variance): tie
+- Evidence pack:
 ```json
 {
   "account": "4010",
@@ -76,12 +81,17 @@ Target September 2026, prior August 2026, threshold $25.0k.
   "variance_phrase": "Increase of $28.0k due to"
 }
 ```
+- Draft attempts:
+  - Attempt 1: Increase of $28.0k due to Customer R's new customer onboarding fee of $15.0k in September (versus $0 in August) and Customer Q's monthly service fee including added seats increasing from $220.0k to $233.0k. This was driven by a $187.4k one-time settlement with Vendor Z. [blocked: amount $187.4k, name Vendor Z]
+  - Attempt 2: Increase of $28.0k due to Customer R's new customer onboarding fee of $15.0k and Customer Q's monthly service fee with added seats increasing $13.0k ($233.0k in September versus $220.0k in August). [passed number check]
 
 ## 6120 Software subscriptions
-- Tier 1: change exceeds threshold of $25.0k
-- Beginning balance (August 2026): 42,000.00
-- Ending balance (September 2026): 71,500.00
+- Tier: 1 (change exceeds threshold of $25.0k)
+- Beginning balance (August 2026): $42,000
+- Ending balance (September 2026): $71,500
+- Change: $29,500 (positive on statement)
 - Tie-out (variance): tie
+- Evidence pack:
 ```json
 {
   "account": "6120",
@@ -152,12 +162,16 @@ Target September 2026, prior August 2026, threshold $25.0k.
   "variance_phrase": "Increase of $29.5k due to"
 }
 ```
+- Draft attempts:
+  - Attempt 1: Increase of $29.5k due to Vendor A's new Annual license charge of $24.0k (September 2026 vs. $0 in August) and Vendor B's increase of $5.5k in Usage charges ($17.5k vs. $12.0k), while Vendor C's Core platform subscription remained flat at $30.0k. [passed number check]
 
 ## 6200 Professional fees
-- Tier 1: change exceeds threshold of $25.0k
-- Beginning balance (August 2026): 18,000.00
-- Ending balance (September 2026): 61,000.00
-- Tie-out (variance): mismatch
+- Tier: 1 (change exceeds threshold of $25.0k)
+- Beginning balance (August 2026): $18,000
+- Ending balance (September 2026): $61,000
+- Change: $43,000 (positive on statement)
+- Tie-out (variance): mismatch, difference $3,000
+- Evidence pack:
 ```json
 {
   "account": "6200",
@@ -218,12 +232,16 @@ Target September 2026, prior August 2026, threshold $25.0k.
   "variance_phrase": "Increase of $43.0k due to"
 }
 ```
+- Draft attempts:
+  - Attempt 1: Increase of $43.0k due to project services from Firm M rising from $0 in August to $40.0k in September, while advisory services from Firm L remained at $18.0k in both months. The statement does not tie to voucher detail by $3.0k. [passed number check]
 
 ## 6350 Meals
-- Tier 2: current month balance runs against natural debit balance
-- Beginning balance (August 2026): 4,000.00
-- Ending balance (September 2026): -1,200.00
+- Tier: 2 (current month balance runs against natural debit balance)
+- Beginning balance (August 2026): $4,000
+- Ending balance (September 2026): -$1,200
+- Change: $5,200 (negative on statement)
 - Tie-out (variance): tie
+- Evidence pack:
 ```json
 {
   "account": "6350",
@@ -281,12 +299,16 @@ Target September 2026, prior August 2026, threshold $25.0k.
   "unnatural_phrase": "Current month balance of $1.2k is a credit on a debit-natural account in September 2026"
 }
 ```
+- Draft attempts:
+  - Attempt 1: Current month balance of $1.2k is a credit on a debit-natural account in September 2026. The Caterer's $3.5k refund of event deposit in September (versus $0 in August) and Employee expenses of $2.3k (down from $4.0k in August) drove the credit balance. [passed number check]
 
 ## 6400 Contract labor
-- Tier 1: change exceeds threshold of $25.0k
-- Beginning balance (August 2026): 12,000.00
-- Ending balance (September 2026): 40,000.00
+- Tier: 1 (change exceeds threshold of $25.0k)
+- Beginning balance (August 2026): $12,000
+- Ending balance (September 2026): $40,000
+- Change: $28,000 (positive on statement)
 - Tie-out (variance): no_gl
+- Evidence pack:
 ```json
 {
   "account": "6400",
@@ -317,3 +339,5 @@ Target September 2026, prior August 2026, threshold $25.0k.
   "variance_phrase": "Increase of $28.0k"
 }
 ```
+- Draft attempts:
+  - Attempt 1: Increase of $28.0k. No transaction detail is available for this account. [passed number check]

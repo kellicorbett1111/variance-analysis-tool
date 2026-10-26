@@ -1,6 +1,6 @@
 Account,Name,Tier,Beginning balance,Ending balance,Change,Tie-out,Draft explanation,Number check
-4010,Service revenue,1,-520000.0,-548000.0,-28000.0,tie,,
-6120,Software subscriptions,1,42000.0,71500.0,29500.0,tie,,
-6200,Professional fees,1,18000.0,61000.0,43000.0,mismatch,,
-6350,Meals,2,4000.0,-1200.0,-5200.0,tie,,
-6400,Contract labor,1,12000.0,40000.0,28000.0,no_gl,,
+4010,Service revenue,1,-520000,-548000,-28000,tie,Increase of $28.0k due to Customer R's new customer onboarding fee of $15.0k and Customer Q's monthly service fee with added seats increasing $13.0k ($233.0k in September versus $220.0k in August).,pass
+6120,Software subscriptions,1,42000,71500,29500,tie,"Increase of $29.5k due to Vendor A's new Annual license charge of $24.0k (September 2026 vs. $0 in August) and Vendor B's increase of $5.5k in Usage charges ($17.5k vs. $12.0k), while Vendor C's Core platform subscription remained flat at $30.0k.",pass
+6200,Professional fees,1,18000,61000,43000,mismatch,"Increase of $43.0k due to project services from Firm M rising from $0 in August to $40.0k in September, while advisory services from Firm L remained at $18.0k in both months. The statement does not tie to voucher detail by $3.0k.",pass
+6350,Meals,2,4000,-1200,-5200,tie,Current month balance of $1.2k is a credit on a debit-natural account in September 2026. The Caterer's $3.5k refund of event deposit in September (versus $0 in August) and Employee expenses of $2.3k (down from $4.0k in August) drove the credit balance.,pass
+6400,Contract labor,1,12000,40000,28000,no_gl,Increase of $28.0k. No transaction detail is available for this account.,pass
