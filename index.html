@@ -256,13 +256,13 @@ async function callAI(prompt,pack){
 }
 // ---------- AI drafting with number check and one corrective retry
 async function draftOne(x,allCps,inject){
-  const log=[];let text='',bad=[];
+  const log=[];let text='',bad=[];let emptyPrev=false;
   for(let attempt=1;attempt<=2;attempt++){
-    const extra=(attempt==2&&bad.length)?'\n\nCORRECTION: your previous draft contained items not in the pack: '+bad.join(', ')+'. Rewrite using only amounts and names that appear in the pack.':'';
+    const extra=(attempt==2&&emptyPrev)?'\n\nYour previous reply was empty. Reply now with the one to three sentence explanation text only.':(attempt==2&&bad.length)?'\n\nCORRECTION: your previous draft contained items not in the pack: '+bad.join(', ')+'. Rewrite using only amounts and names that appear in the pack.':'';
     const r=await callAI(PLAYBOOK+extra,x.pack);
     if(r.isError){log.push({attempt,error:r.text||'AI call failed'});return {text:'',bad:[],log,error:true}}
     text=r.text.trim().replace(/^"|"$/g,'');
-    if(!text){log.push({attempt,text:'',blocked:['empty draft']});bad=[];if(attempt==2){log.push({attempt,error:'The model returned an empty draft. Click Draft again.'});return {text:'',bad:[],log,error:true}}continue}
+    if(!text){log.push({attempt,text:'',blocked:['empty draft']});bad=[];emptyPrev=true;if(attempt==2){log.push({attempt,error:'The model returned an empty draft twice. Raw reply: '+JSON.stringify(r).slice(0,200)});return {text:'',bad:[],log,error:true}}continue}emptyPrev=false;
     if(inject&&attempt==1)text+=' This was driven by a $187.4k one-time settlement with Vendor Z.';
     bad=numberCheck(text,x.pack,allCps);
     log.push({attempt,text,blocked:bad});
